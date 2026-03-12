@@ -2,41 +2,49 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request: { headers: request.headers } })
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) { return request.cookies.get(name)?.value },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value: '', ...options })
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Protect /admin routes
-  if (request.nextUrl.pathname.startsWith('/admin') &&
-      request.nextUrl.pathname !== '/admin/login') {
-    if (!user) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
-    }
+  // If not configured, let admin layout handle the "not configured" UI
+  if (!supabaseUrl || !supabaseAnon) {
+    return NextResponse.next()
   }
 
-  // Redirect logged-in users away from login page
-  if (request.nextUrl.pathname === '/admin/login' && user) {
-    return NextResponse.redirect(new URL('/admin', request.url))
+  let response = NextResponse.next({ request: { headers: request.headers } })
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnon, {
+    cookies: {
+      get(name: string) { return request.cookies.get(name)?.value },
+      set(name: string, value: string, options: CookieOptions) {
+        request.cookies.set({ name, value, ...options })
+        response = NextResponse.next({ request: { headers: request.headers } })
+        response.cookies.set({ name, value, ...options })
+      },
+      remove(name: string, options: CookieOptions) {
+        request.cookies.set({ name, value: '', ...options })
+        response = NextResponse.next({ request: { headers: request.headers } })
+        response.cookies.set({ name, value: '', ...options })
+      },
+    },
+  })
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (request.nextUrl.pathname.startsWith('/admin') &&
+        request.nextUrl.pathname !== '/admin/login') {
+      if (!user) return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+
+    if (request.nextUrl.pathname === '/admin/login' && user) {
+      return NextResponse.redirect(new URL('/admin', request.url))
+    }
+  } catch {
+    // Auth check failed — redirect to login
+    if (request.nextUrl.pathname.startsWith('/admin') &&
+        request.nextUrl.pathname !== '/admin/login') {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
   }
 
   return response
