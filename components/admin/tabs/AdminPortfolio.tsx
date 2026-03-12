@@ -5,7 +5,7 @@ import { Modal, Toast, useToast, Panel, PageHeader, AddBtn, PrimaryBtn, Field, i
 import type { Portfolio } from '@/types'
 
 const COLOR_OPTIONS = ['pc1','pc2','pc3','pc4','pc5','pc6']
-const emptyForm = { title: '', category: 'UI/UX Design', tags: '', description: '', status: 'published' as const, color_class: 'pc1', image_url: '' }
+const emptyForm: { title: string; category: string; tags: string; description: string; status: 'published' | 'draft'; color_class: string; image_url: string } = { title: '', category: 'UI/UX Design', tags: '', description: '', status: 'published', color_class: 'pc1', image_url: '' }
 
 export default function AdminPortfolio({ initialPortfolio }: { initialPortfolio: Portfolio[] }) {
   const [portfolio, setPortfolio] = useState<Portfolio[]>(initialPortfolio)
