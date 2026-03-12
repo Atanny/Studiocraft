@@ -113,7 +113,7 @@ export default function AdminSettings({
                 </div>
               </div>
               <input
-                ref={el => fileRefs.current[idx] = el}
+                ref={el => { fileRefs.current[idx] = el }}
                 type="file"
                 accept="image/*"
                 className="hidden"
